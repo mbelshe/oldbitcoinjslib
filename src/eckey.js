@@ -15,7 +15,7 @@ Bitcoin.ECKey = (function () {
       // Prepend zero byte to prevent interpretation as negative integer
       this.priv = BigInteger.fromByteArrayUnsigned(input);
     } else if ("string" == typeof input) {
-      if (input.length == 51 && input[0] == '5') {
+      if (input.length == 51) {
         // Base58 encoded private key
         this.priv = BigInteger.fromByteArrayUnsigned(ECKey.decodeString(input));
       } else {
@@ -75,7 +75,7 @@ Bitcoin.ECKey = (function () {
   ECKey.prototype.getExportedPrivateKey = function () {
     var hash = this.priv.toByteArrayUnsigned();
     while (hash.length < 32) hash.unshift(0);
-    hash.unshift(0x80);
+    hash.unshift(Bitcoin.ECKey.privateKeyPrefix); // prepend 0x80 byte
     var checksum = Crypto.SHA256(Crypto.SHA256(hash, {asBytes: true}), {asBytes: true});
     var bytes = hash.concat(checksum.slice(0,4));
     return Bitcoin.Base58.encode(bytes);
@@ -120,12 +120,88 @@ Bitcoin.ECKey = (function () {
 
     var version = hash.shift();
 
-    if (version != 0x80) {
+    if (version != Bitcoin.ECKey.privateKeyPrefix) {
       throw "Version "+version+" not supported!";
     }
 
     return hash;
   };
+
+  //
+  // From bitaddress.org.
+  //
+  //
+  // Donation Address: 1NiNja1bUmhSoTXozBRBEtR8LeF9TGbZBN
+  //
+  // Notice of Copyrights and Licenses:
+  // ***********************************
+  // The bitaddress.org project, software and embedded resources are copyright bitaddress.org.
+  // The bitaddress.org name and logo are not part of the open source license.
+  //
+  // Portions of the all-in-one HTML document contain JavaScript codes that are the copyrights of others.
+  // The individual copyrights are included throughout the document along with their licenses.
+  // Included JavaScript libraries are separated with HTML script tags.
+  //
+  // Summary of JavaScript functions with a redistributable license:
+  // JavaScript function     License
+  // *******************     ***************
+  // Array.prototype.map     Public Domain
+  // window.Crypto           BSD License
+  // window.SecureRandom     BSD License
+  // window.EllipticCurve        BSD License
+  // window.BigInteger       BSD License
+  // window.QRCode           MIT License
+  // window.Bitcoin          MIT License
+  // window.Crypto_scrypt        MIT License
+  //
+  // The bitaddress.org software is available under The MIT License (MIT)
+  // Copyright (c) 2011-2012 bitaddress.org
+  //
+  // Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+  // associated documentation files (the "Software"), to deal in the Software without restriction, including
+  // without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  // sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject
+  // to the following conditions:
+  //
+  // The above copyright notice and this permission notice shall be included in all copies or substantial
+  // portions of the Software.
+  //
+  // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+  // LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+  // IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+  // WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+  // SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+  //
+  // GitHub Repository: https://github.com/pointbiz/bitaddress.org
+  //
+
+  // Sipa Private Key Wallet Import Format
+  // NOTE:  This looks a lot like: ECKey.prototype.getExportedPrivateKey = function () {
+  ECKey.prototype.getBitcoinWalletImportFormat = function () {
+    var bytes = this.getBitcoinPrivateKeyByteArray();
+    bytes.unshift(Bitcoin.ECKey.privateKeyPrefix); // prepend 0x80 byte
+    if (this.compressed) bytes.push(0x01); // append 0x01 byte for compressed format
+    var checksum = Crypto.SHA256(Crypto.SHA256(bytes, { asBytes: true }), { asBytes: true });
+    bytes = bytes.concat(checksum.slice(0, 4));
+    var privWif = Bitcoin.Base58.encode(bytes);
+    return privWif;
+  };
+
+  ECKey.prototype.getBitcoinPrivateKeyByteArray = function () {
+    // Get a copy of private key as a byte array
+    var bytes = this.priv.toByteArrayUnsigned();
+    // zero pad if private key is less than 32 bytes
+    while (bytes.length < 32) bytes.unshift(0x00);
+    return bytes;
+  };
+
+  // Convert from a checksummed base58 encoding to an ECKey
+  ECKey.fromCheckedBase58 = function(string) {
+    var base58Checked = Bitcoin.Base58.decode(string);
+    base58Checked = base58Checked.splice(1);  // remove the first byte, a version
+    var base58 = base58Checked.splice(0, base58Checked.length - 4);  // Remove 4 byte checksum
+    return new Bitcoin.ECKey(base58);
+  }
 
   return ECKey;
 })();
