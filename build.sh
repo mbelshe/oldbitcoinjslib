@@ -7,7 +7,6 @@ export FILES="\
     $SRCDIR/src/crypto-js/crypto.js \
     $SRCDIR/src/crypto-js/sha256.js \
     $SRCDIR/src/crypto-js/ripemd160.js \
-    $SRCDIR/src/jsbn/prng4.js \
     $SRCDIR/src/jsbn/rng.js \
     $SRCDIR/src/jsbn/jsbn.js \
     $SRCDIR/src/jsbn/jsbn2.js \
