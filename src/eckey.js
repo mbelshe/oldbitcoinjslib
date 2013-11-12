@@ -1,7 +1,6 @@
 Bitcoin.ECKey = (function () {
   var ECDSA = Bitcoin.ECDSA;
   var ecparams = getSECCurveByName("secp256k1");
-  var rng = new SecureRandom();
 
   var ECKey = function (input) {
     if (!input) {
@@ -99,6 +98,53 @@ Bitcoin.ECKey = (function () {
 
   ECKey.prototype.verify = function (hash, sig) {
     return ECDSA.verify(hash, sig, this.getPub());
+  };
+
+
+
+  /*
+   * Portions of the chaining code were taken from the javascript
+   * armory code included in brainwallet.github.org.
+   */
+
+
+  /**
+   * Chain a key to create a new key.  If this key is based from a private
+   * key, it will create a private key chain.
+   *
+   * If this key is based on a public key, it will generate the public key of the chain.
+   *
+   * Chaincode must be a securely generated 32Byte random number.
+   */
+  ECKey.createPubKeyFromChain = function(pubKey, chainCode) {
+    var chainXor = Crypto.SHA256(Crypto.SHA256(pubKey, {asBytes: true}), {asBytes: true});
+    for (var i = 0; i < 32; i++)
+        chainXor[i] ^= chainCode[i];
+
+    var A = BigInteger.fromByteArrayUnsigned(chainXor);
+    var pt = ECPointFp.decodeFrom(ecparams.getCurve(), pubKey).multiply(A);
+
+    var newPub = pt.getEncoded();
+    return newPub;
+  };
+
+  ECKey.createECKeyFromChain = function(privKey, chainCode) {
+    var eckey = new ECKey(privKey);
+    var privKey = eckey.priv;
+    var pubKey = eckey.getPub();
+
+    var chainXor = Crypto.SHA256(Crypto.SHA256(pubKey, {asBytes: true}), {asBytes: true});
+    for (var i = 0; i < 32; i++)
+        chainXor[i] ^= chainCode[i];
+
+    var A = BigInteger.fromByteArrayUnsigned(chainXor);
+    var B = BigInteger.fromByteArrayUnsigned(privKey);
+    var C = ecparams.getN();
+    var secexp = (A.multiply(B)).mod(C);
+    var pt = ecparams.getG().multiply(secexp);
+
+    var newPriv = secexp ? secexp.toByteArrayUnsigned() : [];
+    return new ECKey(newPriv);
   };
 
   /**

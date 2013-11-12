@@ -297,3 +297,51 @@ test("Parse", function() {
   equal(1, tx.ins.length, "input length");
   equal(1, tx.outs.length, "output length");
 });
+
+
+
+//
+// Testing ECKey Chaining
+// -----------------------------------------------------------------------------
+module("ECKey Chains");
+
+test("Construction", function() {
+  var eckey = new Bitcoin.ECKey();
+  ok(eckey, "created");
+  var priv = eckey.priv;
+
+  var random = new SecureRandom();
+
+  var chainCode = new Array(32);
+  random.nextBytes(chainCode);
+  equal(32, chainCode.length);
+  var foundNonzero = false;
+  for (var index = 0; index < chainCode.length; ++index) {
+    equal(true, chainCode[index] >= 0);
+    equal(true, chainCode[index] < 256);
+    if (chainCode[index] != 0) {
+      foundNonzero = true;
+    }
+  }
+  expect(true, foundNonzero);  // RNG that outputs all zeroes is kinda weak!
+
+  var newkey = Bitcoin.ECKey.createECKeyFromChain(priv.toByteArrayUnsigned(), chainCode);
+  ok(newkey, "created chain key");
+  notDeepEqual(newkey.getPub(), eckey.getPub());
+
+  var hash = new Array(32);
+  random.nextBytes(hash);
+
+  // Verify the generated keys are different and can't sign for each other.
+  var signature1 = eckey.sign(hash);
+  var signature2 = newkey.sign(hash);
+  equal(true, eckey.verify(hash, signature1));
+  notEqual(true, eckey.verify(hash, signature2));
+  equal(true, newkey.verify(hash, signature2));
+  notEqual(true, newkey.verify(hash, signature1));
+
+  // Now, can we derive the same public key by chaining just the public key
+  var pubkeyChain = Bitcoin.ECKey.createPubKeyFromChain(eckey.getPub(), chainCode);
+  deepEqual(pubkeyChain, newkey.getPub());
+  notDeepEqual(pubkeyChain, eckey.getPub());
+});
