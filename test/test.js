@@ -133,7 +133,7 @@ test("MultiSig Addresses - Prod network", function () {
   Bitcoin.setNetwork('prod');
   var keys = [];
   for (var index = 0; index < 3; ++index) {
-    keys.push(new Bitcoin.ECKey());
+    keys.push(new Bitcoin.ECKey().getPub());
   }
   var multiSigAddress = Bitcoin.Address.createMultiSigAddress(keys, 2);
   ok(multiSigAddress, "createMultiSigAddress");
@@ -162,7 +162,7 @@ test("MultiSig Addresses - Test network", function () {
   Bitcoin.setNetwork('testnet');
   var keys = [];
   for (var index = 0; index < 3; ++index) {
-    keys.push(new Bitcoin.ECKey());
+    keys.push(new Bitcoin.ECKey().getPub());
   }
   var multiSigAddress = Bitcoin.Address.createMultiSigAddress(keys, 2);
   ok(multiSigAddress, "createMultiSigAddress");
@@ -171,6 +171,19 @@ test("MultiSig Addresses - Test network", function () {
   equal(true, multiSigAddress.isP2SHAddress(), 'isPubKeyHash');
 
   equal(true, Bitcoin.Address.validate(multiSigAddress.toString()), 'validate');
+});
+
+test("MultiSig Addresses - reject bad args", function() {
+  expect(1);
+  Bitcoin.setNetwork('prod');
+  var keys = [];
+  for (var index = 0; index < 3; ++index) {
+    keys.push(new Bitcoin.ECKey());
+  }
+  throws(function() {
+    // Can't create using ECKey - must be an array of pubKeys
+    var multiSigAddress = Bitcoin.Address.createMultiSigAddress(keys, 2);
+  });
 });
 
 test("Construction", function() {
@@ -253,7 +266,7 @@ test("Pay To Script Hash Output Script", function() {
   expect(5);
   var keys = [];
   for (var index = 0; index < 3; ++index) {
-    keys.push(new Bitcoin.ECKey());
+    keys.push(new Bitcoin.ECKey().getPub());
   }
   var multiSigAddress = Bitcoin.Address.createMultiSigAddress(keys, 2);
   var script = Bitcoin.Script.createOutputScript(multiSigAddress);
@@ -266,6 +279,31 @@ test("Pay To Script Hash Output Script", function() {
   script.extractAddresses(addresses);
   equal(1, addresses.length, "extract addresses count");
   equal(multiSigAddress.toString(), addresses[0].toString(), "extract addresses");
+});
+
+test("Decode MultiSig Input Script", function() {
+  var keys = [];
+  for (var index = 0; index < 3; ++index) {
+    keys.push(new Bitcoin.ECKey().getPub());
+  }
+  var multiSigAddress = Bitcoin.Address.createMultiSigAddress(keys, 2);
+  ok(multiSigAddress, 'created address');
+  var redeemScript = multiSigAddress.redeemScript;
+  ok(redeemScript, 'got redeem script');
+
+  var hex = Bitcoin.Util.bytesToHex(redeemScript);
+  ok(hex, 'converted to hex');
+  var bytes = Bitcoin.Util.hexToBytes(hex);
+  ok(bytes, 'converted back to bytes');
+  var script = new Bitcoin.Script(bytes);
+  ok(script, 'created script');
+
+  var addresses = [];
+  var count = script.extractMultiSigPubKeys(addresses);
+  equal(count, 3, 'found right number of addresses');
+  deepEqual(addresses[0], keys[0], 'key #0 is ok');
+  deepEqual(addresses[1], keys[1], 'key #1 is ok');
+  deepEqual(addresses[2], keys[2], 'key #2 is ok');
 });
 
 

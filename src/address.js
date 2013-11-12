@@ -73,8 +73,11 @@
   
   Address.createMultiSigAddress = function(keys, numRequired) {
     if (numRequired < 0 || numRequired > keys.length || numRequired > 16) { throw "invalid number of keys required" }
+    for (var index = 0; index < keys.length; ++index) {
+      if (Object.prototype.toString.call(keys[index]) != '[object Array]') { throw "pub keys are not of right type"; }
+    }
   
-    var redeemScript = Bitcoin.Script.createMultiSigOutputScript(numRequired, keys);
+    var redeemScript = Bitcoin.Script.createMultiSigScript(numRequired, keys);
     var bytes = redeemScript.buffer;
     var hash = Bitcoin.Util.sha256ripe160(bytes);
     var address = new Bitcoin.Address(hash);

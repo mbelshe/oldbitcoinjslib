@@ -1,8 +1,10 @@
 // Use SJCL for our random source
 
-sjcl.random.startCollectors();  // do this only once
-
 function SecureRandom() {
+}
+
+SecureRandom.prototype.clientSideRandomInit = function() {
+  sjcl.random.startCollectors();  // do this only once
 }
 
 SecureRandom.prototype.nextBytes = function(arrayToFillRandomly) {

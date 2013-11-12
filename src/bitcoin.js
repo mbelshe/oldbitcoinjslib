@@ -66,10 +66,18 @@
       //return [0xff].concat(Crypto.util.wordsToBytes([i >>> 32, i]).reverse());
     }
   }
-  
+
   // So we can load into node.
   if (typeof(module) == 'object') {
     module.exports = function(network) {
+      sjcl = require('sjcl');
+
+      // The SJCL guys screwed up how they export modules; so two imports
+      // both need to separately initialize the randomness.
+      var crypto = require('crypto');
+      var buf = crypto.randomBytes(1024/8).toString();
+      sjcl.random.addEntropy(buf, 1024, "crypto.randomBytes");
+
       Bitcoin.setNetwork(network);
       return Bitcoin;
     }

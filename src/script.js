@@ -91,7 +91,7 @@
    */
   Script.prototype.getOutType = function () {
     if (this.chunks[this.chunks.length-1] == ops.OP_CHECKMULTISIG &&
-        this.chunks[this.chunks.length-2] <= 3) {
+        this.chunks[this.chunks.length-2] <= ops.OP_1 + 2) {
       // Transfer to M-OF-N
       return 'Multisig';
     } else if (this.chunks.length == 5 &&
@@ -306,31 +306,50 @@
       addresses.push(new Bitcoin.Address(this.chunks[2]));
       return 1;
     case 'Pubkey':
-      addresses.push(new Bitcoin.Address(Util.sha256ripe160(this.chunks[0])));
+      addresses.push(new Bitcoin.Address(Bitcoin.Util.sha256ripe160(this.chunks[0])));
       return 1;
     case 'P2SH':
       addresses.push(new Bitcoin.Address(this.chunks[1], Bitcoin.Address.p2shVersion));
       return 1;
     case 'Multisig':
-      for (var i = 1; i < this.chunks.length-2; ++i) {
-        addresses.push(new Bitcoin.Address(Util.sha256ripe160(this.chunks[i])));
+      var pubKeys = [];
+      var count = this.extractMultiSigPubKeys(pubKeys);
+      for (var index = 0; index < pubKeys.length; ++index) {
+        addresses.push(new Bitcoin.Address(Util.sha256ripe160(pubKeys[index])));
       }
-      return this.chunks[0] - ops.OP_1 + 1;
+      return count;
     default:
       throw new Error("Encountered non-standard scriptPubKey");
     }
   };
 
   /**
-   * Create an m-of-n output script
-   * Note: This is NOT a P2SH address.
+   * Extract bitcoin addresses from a multi-sigscript
    */
-  Script.createMultiSigOutputScript = function (m, pubkeys)
+  Script.prototype.extractMultiSigPubKeys = function (keys)
+  { 
+    if (this.chunks.length == 0 ||
+        this.chunks[this.chunks.length - 1] != ops.OP_CHECKMULTISIG ||
+        this.chunks[this.chunks.length - 2] > ops.OP_1 + 2) {
+      throw 'not a multisig script';
+    }
+    for (var i = 1; i < this.chunks.length-2; ++i) {
+      keys.push(this.chunks[i]);
+    }
+    return this.chunks[4] - ops.OP_1 + 1;
+  };
+
+  /**
+   * Create an m-of-n script.
+   * This can either be a multi-signature output or the
+   * P2SH input script.
+   */
+  Script.createMultiSigScript = function (m, pubkeys)
   {
     var script = new Bitcoin.Script();
-    
+
     script.writeOp(ops.OP_1 + m - 1);
-    
+
     for (var i = 0; i < pubkeys.length; ++i) {
       script.writeBytes(pubkeys[i]);
     }
