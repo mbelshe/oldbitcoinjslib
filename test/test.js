@@ -299,13 +299,36 @@ test("Parse", function() {
 });
 
 
+//
+// Testing Random
+// -----------------------------------------------------------------------------
+module("Random");
+
+test("Byte Random", function() {
+  var random = new SecureRandom();
+  var randomArray = new Array(16);
+
+  random.nextBytes(randomArray);
+  equal(16, randomArray.length, 'random array fill length');
+
+  var foundNonzero = false;
+  for (var index = 0; index < randomArray.length; ++index) {
+    var elt = randomArray[index];
+    equal(true, (elt >= 0 && elt < 256), 'random elt #' + index + ' is in range');
+    if (elt != 0) {
+      foundNonzero = true;
+    }
+  }
+  equal(true, foundNonzero, 'not just a bunch of zeroes');
+});
+
 
 //
 // Testing ECKey Chaining
 // -----------------------------------------------------------------------------
 module("ECKey Chains");
 
-test("Construction", function() {
+test("Basic Chaining", function() {
   var eckey = new Bitcoin.ECKey();
   ok(eckey, "created");
   var priv = eckey.priv;
@@ -314,20 +337,10 @@ test("Construction", function() {
 
   var chainCode = new Array(32);
   random.nextBytes(chainCode);
-  equal(32, chainCode.length);
-  var foundNonzero = false;
-  for (var index = 0; index < chainCode.length; ++index) {
-    equal(true, chainCode[index] >= 0);
-    equal(true, chainCode[index] < 256);
-    if (chainCode[index] != 0) {
-      foundNonzero = true;
-    }
-  }
-  expect(true, foundNonzero);  // RNG that outputs all zeroes is kinda weak!
 
   var newkey = Bitcoin.ECKey.createECKeyFromChain(priv.toByteArrayUnsigned(), chainCode);
-  ok(newkey, "created chain key");
-  notDeepEqual(newkey.getPub(), eckey.getPub());
+  ok(newkey, "created chain from private key");
+  notDeepEqual(newkey.getPub(), eckey.getPub(), 'chained public key is not equal to original public key');
 
   var hash = new Array(32);
   random.nextBytes(hash);
@@ -335,13 +348,103 @@ test("Construction", function() {
   // Verify the generated keys are different and can't sign for each other.
   var signature1 = eckey.sign(hash);
   var signature2 = newkey.sign(hash);
-  equal(true, eckey.verify(hash, signature1));
-  notEqual(true, eckey.verify(hash, signature2));
-  equal(true, newkey.verify(hash, signature2));
-  notEqual(true, newkey.verify(hash, signature1));
+  equal(true, eckey.verify(hash, signature1), 'key1 can verify a its own sig');
+  notEqual(true, eckey.verify(hash, signature2), 'key1 cannot verify key2\'s sig');
+  equal(true, newkey.verify(hash, signature2), 'key2 can verify its own sig');
+  notEqual(true, newkey.verify(hash, signature1), 'key2 cannot verify key1\'s sig');
 
   // Now, can we derive the same public key by chaining just the public key
   var pubkeyChain = Bitcoin.ECKey.createPubKeyFromChain(eckey.getPub(), chainCode);
-  deepEqual(pubkeyChain, newkey.getPub());
-  notDeepEqual(pubkeyChain, eckey.getPub());
+  ok(pubkeyChain, 'created chain from pubkey');
+  deepEqual(pubkeyChain, newkey.getPub(), 'chained public key derived from parent\'s public key matches that dervived from parent\'s private key');
+  notDeepEqual(pubkeyChain, eckey.getPub(), 'chained public key derived from parent\'s public key does not match parent');
+});
+
+Object.associativeArraySize = function(obj) {
+    var size = 0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+};
+
+test("Parallel Chains", function() {
+  var random = new SecureRandom();
+
+  var kNumParallelChains = 6;
+
+  var eckey = new Bitcoin.ECKey();
+  var chainedKeys = {};
+  for (var index = 0; index < kNumParallelChains; ++index) {
+    var chain = new Array(32);
+    random.nextBytes(chain);
+    var newkey = Bitcoin.ECKey.createECKeyFromChain(eckey.priv.toByteArrayUnsigned(), chain);
+    chainedKeys[newkey.getBitcoinAddress().toString()] = { chain: chain, key: newkey };
+  }
+  equal(Object.associativeArraySize(chainedKeys), kNumParallelChains, "generated unique keys");
+
+  for (var chainedKey in chainedKeys) {
+     var elt = chainedKeys[chainedKey];
+     var chain = elt.chain;
+     var expectedPubKey = elt.key.getPub();
+     var chainedPubKey = Bitcoin.ECKey.createPubKeyFromChain(eckey.getPub(), chain);
+     deepEqual(chainedPubKey, expectedPubKey, 'derived pubkeys match for case: ' + chainedKey);
+  }
+});
+
+test("Serial Chains", function() {
+  var random = new SecureRandom();
+
+  var kNumSerialChains = 6;
+
+  var eckey = new Bitcoin.ECKey();
+  var chainedKeys = [];
+  var keyRoot = eckey;
+  for (var index = 0; index < kNumSerialChains; ++index) {
+    var chain = new Array(32);
+    random.nextBytes(chain);
+    var newkey = Bitcoin.ECKey.createECKeyFromChain(keyRoot.priv.toByteArrayUnsigned(), chain);
+    chainedKeys.push({ chain: chain, key: newkey });
+    keyRoot = newkey;
+  }
+  equal(Object.associativeArraySize(chainedKeys), kNumSerialChains, "generated unique keys");
+
+  var chainHead = eckey.getPub();
+  for (var index = 0; index < kNumSerialChains; ++index) {
+     var elt = chainedKeys[index];
+     var chain = elt.chain;
+
+     var chainedPubKey = Bitcoin.ECKey.createPubKeyFromChain(chainHead, chain);
+     var expectedPubKey = elt.key.getPub();
+
+     var bitcoinAddress = Bitcoin.Address.fromPubKey(chainedPubKey);
+     deepEqual(chainedPubKey, expectedPubKey, 'derived pubkeys match for case: ' + bitcoinAddress);
+     chainHead = chainedPubKey;
+  }
+});
+
+
+//
+// Testing Util
+// -----------------------------------------------------------------------------
+module("Util");
+
+test("bytesToBase64 - ok", function() {
+  var randomArray = new Array(32);
+  new SecureRandom().nextBytes(randomArray);
+
+  var testArrays = [
+    [1],
+    [1,2,3,4,5,6,7],
+    randomArray
+  ];
+  
+  for (var index = 0; index < testArrays.length; ++index) {
+    var a = testArrays[index];
+    var s = Bitcoin.Util.bytesToBase64(a);
+    ok(s, 'encoded test array #' + index);
+    var a2 = Bitcoin.Util.base64ToBytes(s);
+    ok(a2, 'decoded test array #' + index);
+    deepEqual(a, a2, 'decoded array #' + index + ' matched');
+  }
 });
