@@ -493,6 +493,9 @@
 
     var f = bytes.slice(0);
     var tx_ver = u32(f);
+    if (tx_ver != 1) {
+        return null;
+    }
     var vin_sz = readVarInt(f);
     if (errv(vin_sz))
         return null;

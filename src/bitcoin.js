@@ -75,7 +75,7 @@
       // The SJCL guys screwed up how they export modules; so two imports
       // both need to separately initialize the randomness.
       var crypto = require('crypto');
-      var buf = crypto.randomBytes(1024/8).toString();
+      var buf = Bitcoin.Util.hexToBytes(crypto.randomBytes(1024/8).toString('hex'));
       sjcl.random.addEntropy(buf, 1024, "crypto.randomBytes");
 
       Bitcoin.setNetwork(network);
