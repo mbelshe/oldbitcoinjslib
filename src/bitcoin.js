@@ -41,32 +41,6 @@
     return true;
   }
   
-  /**
-   * Turn an integer into a "var_int".
-   *
-   * "var_int" is a variable length integer used by Bitcoin's binary format.
-   *
-   * NOTE:  This function was just buggy in the original implementation.
-   *
-   * Returns a byte array.
-   */
-  Bitcoin.Util.numToVarInt = function (i) {
-    if (i < 0xfd) {
-      // unsigned char
-      return [i];
-    } else if (i <= 1<<16) {
-      // unsigned short (LE)
-      return [0xfd, i & 255, i >>> 8];    // little endian!
-    } else if (i <= 1<<32) {
-      // unsigned int (LE)
-      return [0xfe].concat(Crypto.util.wordsToBytes([i]).reverse());  // little endian!
-    } else {
-      throw "long long not implmented";
-      // unsigned long long (LE)
-      //return [0xff].concat(Crypto.util.wordsToBytes([i >>> 32, i]).reverse());
-    }
-  }
-
   // So we can load into node.
   if (typeof(module) == 'object') {
     module.exports = function(network) {

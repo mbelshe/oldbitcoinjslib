@@ -315,7 +315,11 @@ module("Transaction");
 test("Construction", function() {
   var transaction = new Bitcoin.Transaction();
   ok(transaction, "create");
-  ok(transaction.serialize(), "serialize");
+  var bytes = transaction.serialize();
+  ok(bytes, "serialize");
+  var tx2 = Bitcoin.Transaction.deserialize(bytes);
+  ok(tx2, "deserialize");
+  deepEqual(transaction.getHash(), tx2.getHash(), "deserialized matches tx");
 });
 
 test("Add Input", function() {
@@ -334,6 +338,28 @@ test("Parse", function() {
   ok(tx, "deserialize");
   equal(1, tx.ins.length, "input length");
   equal(1, tx.outs.length, "output length");
+});
+
+test("Sign", function() {
+
+});
+
+test("Verify", function() {
+
+});
+
+test("Serialize", function() {
+  var tx = new Bitcoin.Transaction();
+  tx.addInput({hash: Bitcoin.Util.bytesToBase64(tx.getHash())}, 0);
+  tx.addInput({hash: Bitcoin.Util.bytesToBase64(tx.getHash())}, 0);
+  tx.addInput({hash: Bitcoin.Util.bytesToBase64(tx.getHash())}, 0);
+  tx.addOutput(new Bitcoin.Address(new Bitcoin.ECKey()), 50000);
+  var bytes = tx.serialize();
+  ok(bytes, 'serialize ok');
+  var tx2 = Bitcoin.Transaction.deserialize(bytes);
+  deepEqual(tx.getHash(), tx2.getHash(), 'hash is ok');
+  equal(tx2.ins.length, 3, 'input length ok');
+  equal(tx2.outs.length, 1, 'output length ok');
 });
 
 

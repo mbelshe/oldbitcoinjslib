@@ -68,32 +68,6 @@
   };
 
   /**
-   * Create a new txout.
-   *
-   * Can be called with an existing TransactionOut object to add it to the
-   * transaction. Or it can be called with an Address object and a BigInteger
-   * for the amount, in which case a new TransactionOut object with those
-   * values will be created.
-   */
-  Transaction.prototype.addOutput = function (address, value) {
-    if (arguments[0] instanceof TransactionOut) {
-      this.outs.push(arguments[0]);
-    } else {
-      if (value instanceof BigInteger) {
-        value = value.toByteArrayUnsigned().reverse();
-        while (value.length < 8) value.push(0);
-      } else if (Bitcoin.Util.isArray(value)) {
-        // Nothing to do
-      }
-
-      this.outs.push(new TransactionOut({
-        value: value,
-        script: Script.createOutputScript(address)
-      }));
-    }
-  };
-
-  /**
    * Serialize this transaction.
    *
    * Returns the transaction as a byte array in the standard Bitcoin binary
@@ -334,12 +308,12 @@
     return totalValue;
   };
 
-   /**
-    * Old name for Transaction#getTotalOutValue.
-    *
-    * @deprecated
-    */
-   Transaction.prototype.getTotalValue = Transaction.prototype.getTotalOutValue;
+  /**
+   * Old name for Transaction#getTotalOutValue.
+   *
+   * @deprecated
+   */
+  Transaction.prototype.getTotalValue = Transaction.prototype.getTotalOutValue;
 
   /**
    * Calculates the impact a transaction has on this wallet.
@@ -491,7 +465,7 @@
   Transaction.deserialize = function(bytes) {
     var sendTx = new Bitcoin.Transaction();
 
-    var f = bytes.slice(0);
+    var f = bytes.slice(0);  // creates a copy.
     var tx_ver = u32(f);
     if (tx_ver != 1) {
         return null;
@@ -537,11 +511,30 @@
     return sendTx;
   };
 
+  /*
+   * Cracks open the transaction and verifies if the signature matches.
+   */
+  Transaction.prototype.verifySignatures = function(inputTransaction) {
+/*
+ *
+ * IMPLEMENT ME
+ *
+    for (var index = 0; index < this.ins.lengths; ++index) {
+      var input = this.ins[index];
+      var inputScript = input.script;
+      var scriptType = inputScript.getOutType();
+
+      var txHashForSigning = this.hashTransactionForSignature(inputScript, index, SIGHASH_ALL);
+    }
+*/
+    return false;
+  };
+
   // Enumerate all the inputs, and find any which require a key
   // which matches the input key.
   //
   // Returns the number of inputs signed.
-  Bitcoin.Transaction.prototype.signWithKey = function(key) {
+  Transaction.prototype.signWithKey = function(key) {
     var signatureCount = 0;
   
     var keyHash = key.getPubKeyHash();
