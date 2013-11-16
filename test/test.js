@@ -69,7 +69,7 @@ test("Signing and Verifying", function () {
   var sig_a = s1.sign(BigInteger.ZERO);
   ok(sig_a, "Sign null");
   ok(s1.verify(BigInteger.ZERO, sig_a));
-  
+
   var message = new BigInteger(1024, rng).toByteArrayUnsigned();
   var hash = Crypto.SHA256(message, {asBytes: true});
   var sig_b = s1.sign(hash);
@@ -374,16 +374,10 @@ console.dir(txInput);
   var scriptPub = txInput.outs[0].script;
   var script = new Bitcoin.Script(scriptPub);
   equal(script.getOutType(), 'P2SH');
-  
+
   var signatureHash = tx.hashTransactionForSignature(scriptPub, 0, 1 /* SIGHASH_ALL */);
 
-
-
-
-
-
-
-
+  // TODO:  Flesh this out further.
 });
 
 test("Serialize", function() {
