@@ -340,11 +340,49 @@ test("Parse", function() {
   equal(1, tx.outs.length, "output length");
 });
 
+/*
 test("Sign", function() {
 
 });
+*/
 
 test("Verify", function() {
+  // This is a transaction that never went through, and we need to find out why.
+  // txhash is 86dc61528df1e0ff190bb3e1a4ccf9c0843fed5e25bb50e13875e0ecea098652
+  var txData = '01000000011590a0d5560a022220996a466704427745d489465fb25b0b338344e7fe8fc6fe00000000fd5f0100483045022100bbf198a7b68bb12677d52af7e73e656bb08a1090b68531eba06c6ace565f7a1a02200864b7ae3ce342029b67d6a065363ee444dbed5de56a902b12e32e9013bda88101493046022100d7df7d9cf534a3caf1b8015664f0d2b192e266d899aec39935775c1ef4bdafa20221008f44f2a82ef6d6f48535b804d4a82632d491e54b5bf2a6337dc29a5528cdd5af014cc952410436e4130a66a0cbcc0ff85b19865194a8a2c0c6d43aba6902e7218f48e8aa7d3252619e4d31d173661d4ae42a133d437d98f9b19913557f3a95f1aeba97c91eeb4104ca4520c5455e1325a381645ea9dc69236256de9773c7acfc41de1bc63d928dae3fa16ae0ea7ed1163de2b35a4491fe7fb0d86df79239a3e5516865dc41b8c393410456c85a3a308e855a455836f3f5bc3aa7b9fc544efdba5f38b3a53f7c0618698cb4bc7afa0a4c332c43532dead39622b2de937b0984e3ebe0a00354b82fe766e053aeffffffff0220487801000000001976a9142d618e9a5f18a1364d914ff7a4f441c937c450c288ac931600000000000017a9142b61525ba3428cc7eac032196567cd88a922330e8700000000';
+
+  // This is the input transaction
+  // txhash is fec68ffee74483330b5bb25f4689d44577420467466a992022020a56d5a09015
+  var txInputData = '01000000024b6092717a5541e440685261cf69b81e9b7406237acf74c1fc1b804c7e408e5e010000008b48304502203c53ad366df25c6bd8835fc4f8bb4dc8a1a49508933051b9e133320c01e2444d022100f45fa714f49d46b1467a746b8d08eccb82f9e38871a0766d24fb0f0e5728b394014104e9a50e5a6a2581ae573e8dab0048c01b2f00d129adb74fde4fc38689a9c201035d317f6233c2650bdc774525d8a57e499b3709f43cdfbae20af42f3db4053ee8ffffffff4b6092717a5541e440685261cf69b81e9b7406237acf74c1fc1b804c7e408e5e020000008b48304502204c90587b3bfd6e9eb7e6ec2c8c3289e9176f683285c3a59ce1dc762bbb2dba3b022100d92cef409e56da916e7f4fbc9ccfbe29b1a53afabffc9058b1204660023cbab7014104e9a50e5a6a2581ae573e8dab0048c01b2f00d129adb74fde4fc38689a9c201035d317f6233c2650bdc774525d8a57e499b3709f43cdfbae20af42f3db4053ee8ffffffff02b35e78010000000017a9142b61525ba3428cc7eac032196567cd88a922330e87a10e3d50000000001976a9146dace82d7b34b7e37b817d89b7c4af3c33a4c47c88ac00000000';
+
+  var tx = Bitcoin.Transaction.deserialize(Bitcoin.Util.hexToBytes(txData));
+  ok(tx);
+  equal(tx.version, 1, 'check version');
+  equal(tx.ins.length, 1, 'input count');
+  equal(tx.outs.length, 2, 'output count');
+console.dir(tx);
+  deepEqual(Bitcoin.Util.bytesToHex(Bitcoin.Util.base64ToBytes(tx.ins[0].outpoint.hash).reverse()), 'fec68ffee74483330b5bb25f4689d44577420467466a992022020a56d5a09015', 'input 0 hash');
+  equal(tx.ins[0].outpoint.index, 0, 'input 0 index');
+
+  var txInput = Bitcoin.Transaction.deserialize(Bitcoin.Util.hexToBytes(txInputData));
+  ok(txInput);
+console.dir(txInput);
+  equal(txInput.version, 1, 'check version');
+  equal(txInput.ins.length, 2, 'input count');
+  equal(txInput.outs.length, 2, 'output count');
+
+  var scriptPub = txInput.outs[0].script;
+  var script = new Bitcoin.Script(scriptPub);
+  equal(script.getOutType(), 'P2SH');
+  
+  var signatureHash = tx.hashTransactionForSignature(scriptPub, 0, 1 /* SIGHASH_ALL */);
+
+
+
+
+
+
+
 
 });
 
