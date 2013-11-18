@@ -62,7 +62,31 @@
       while (leadingZerosNum-- > 0) bytes.unshift(0);
 
       return bytes;
+    },
+
+    encodeFromString: function(str) {
+      if(typeof str !== 'string') {
+        throw 'input must be a string';
+      }
+      var bytes = [];
+      for (var i = 0; i < str.length; ++i) {
+        bytes.push(str.charCodeAt(i));
+      }
+      return this.encode(bytes);
+    },
+
+    decodeToString: function(encoded) {
+      if(typeof encoded !== 'string') {
+        throw 'input must be a string';
+      }
+      var str = '';
+      var bytes = this.decode(encoded);
+      for (var i = 0; i < bytes.length; ++i) {
+        str += String.fromCharCode(parseInt(bytes[i], 10));
+      }
+      return str;
     }
+
   };
 
   var B58 = Bitcoin.Base58;

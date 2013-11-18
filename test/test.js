@@ -544,3 +544,23 @@ test("bytesToBase64 - ok", function() {
     deepEqual(a, a2, 'decoded array #' + index + ' matched');
   }
 });
+
+test("stringToBase58", function() {
+  var tests = [
+    'x',
+    'hello world',
+    'this is a place where my oysters eat sharks with laserbeams',
+  ];
+
+  for (var index = 0; index < tests.length; ++index) {
+    var testString = tests[index];
+    var enc = Bitcoin.Base58.encodeFromString(testString);
+    ok(enc, 'encode case #' + index);
+    var dec = Bitcoin.Base58.decodeToString(enc);
+    equal(dec, testString, 'decode case #' + index);
+  }
+
+  throws(function() { Bitcoin.Base58.encodeFromString(''); }, 'empty string throws');
+  throws(function() { Bitcoin.Base58.encodeFromString(1234); }, 'integer input throws');
+  throws(function() { Bitcoin.Base58.encodeFromString([1,2,3,4]); }, 'array input throws');
+});
