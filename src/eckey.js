@@ -117,6 +117,9 @@ Bitcoin.ECKey = (function () {
    * Chaincode must be a securely generated 32Byte random number.
    */
   ECKey.createPubKeyFromChain = function(pubKey, chainCode) {
+    if (!Bitcoin.Util.isArray(chainCode)) {
+      throw('chaincode must be a byte array');
+    }
     var chainXor = Crypto.SHA256(Crypto.SHA256(pubKey, {asBytes: true}), {asBytes: true});
     for (var i = 0; i < 32; i++)
         chainXor[i] ^= chainCode[i];
@@ -129,6 +132,9 @@ Bitcoin.ECKey = (function () {
   };
 
   ECKey.createECKeyFromChain = function(privKey, chainCode) {
+    if (!Bitcoin.Util.isArray(chainCode)) {
+      throw('chaincode must be a byte array');
+    }
     var eckey = new ECKey(privKey);
     var privKey = eckey.priv;
     var pubKey = eckey.getPub();
