@@ -70,8 +70,13 @@ var util = Crypto.util = {
 
 	// Convert a hex string to a byte array
 	hexToBytes: function (hex) {
-		for (var bytes = [], c = 0; c < hex.length; c += 2)
-			bytes.push(parseInt(hex.substr(c, 2), 16));
+		for (var bytes = [], c = 0; c < hex.length; c += 2) {
+            var val = parseInt(hex.substr(c, 2), 16);
+            if (isNaN(val)) {
+              throw 'invalid input';
+            }
+			bytes.push(val);
+        }
 		return bytes;
 	},
 
